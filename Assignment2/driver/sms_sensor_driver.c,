@@ -39,9 +39,9 @@ static ssize_t sms_read(struct file *file, char __user *buf, size_t len, loff_t 
     mutex_lock(&sensor_mutex);
     
     rand_val = get_random_u32();
-    last_temp_scaled = 1500 + (rand_val % 3000); 
+    last_temp_scaled = 1500 + (rand_val % 3000); // 15.00 đến 45.00
     rand_val = get_random_u32();
-    last_humi_scaled = 3000 + (rand_val % 6000); 
+    last_humi_scaled = 3000 + (rand_val % 6000); // 30.00 đến 90.00
     
     read_count++;
     timestamp_ms = ktime_to_ms(ktime_get());
@@ -93,7 +93,6 @@ static long sms_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {
 static int sms_proc_show(struct seq_file *m, void *v) {
     long long uptime_sec = ktime_divns(ktime_sub(ktime_get(), start_time), NSEC_PER_SEC);
     int temp_int, temp_dec, humi_int, humi_dec;
-    char line_buf[256];
     
     mutex_lock(&sensor_mutex);
     
@@ -103,13 +102,12 @@ static int sms_proc_show(struct seq_file *m, void *v) {
     humi_int = last_humi_scaled / 100;
     humi_dec = last_humi_scaled % 100;
 
-    snprintf(line_buf, sizeof(line_buf), 
-             "read_count: %lu\nlast_temperature: %d.%02d\nlast_humidity: %d.%02d\ndriver_uptime_seconds: %lld\n",
-             read_count, temp_int, temp_dec, humi_int, humi_dec, uptime_sec);
+    seq_printf(m, "read_count: %lu\n", read_count);
+    seq_printf(m, "last_temperature: %d.%02d\n", temp_int, temp_dec);
+    seq_printf(m, "last_humidity: %d.%02d\n", humi_int, humi_dec);
+    seq_printf(m, "driver_uptime_seconds: %lld\n", uptime_sec);
     
     mutex_unlock(&sensor_mutex);
-    
-    seq_puts(m, line_buf);
     return 0;
 }
 
