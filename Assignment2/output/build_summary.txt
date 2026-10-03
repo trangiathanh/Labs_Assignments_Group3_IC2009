@@ -1,0 +1,5 @@
+Assignment 2 - Embedded Linux Driver & Multithreaded Application
+==============================================================
+- Driver Module: sms_sensor_driver.ko (Successfully built for Linux 6.8.0-138-generic)
+- Userspace App: sms_app (Multithreaded with Circular Buffer, POSIX Threads, SCHED_FIFO)
+- Status: Verified and tested successfully.
