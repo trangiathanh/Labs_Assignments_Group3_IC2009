@@ -19,28 +19,25 @@ static atomic_t total_writes = ATOMIC_INIT(0);
 
 static ssize_t counter_read(struct file *file, char __user *buf, size_t len, loff_t *offset) {
     char kbuf[32];
-    int val, bytes_to_copy;
+    int bytes;
 
     if (*offset > 0)
-        return 0; /* EOF - Ngung doc khi da tra ve xong du lieu */
+        return 0; /* Tra ve EOF de tranh doc lap vo han */
 
-    val = atomic_read(&counter);
-    atomic_inc(&counter); /* Tu dong tang 1 khi doc */
-    atomic_inc(&total_reads);
+    bytes = snprintf(kbuf, sizeof(kbuf), "%d\n", atomic_read(&counter));
+    atomic_inc(&counter);     /* Tu dong tang counter khi doc */
+    atomic_inc(&total_reads); /* Tang tong so lan doc */
 
-    snprintf(kbuf, sizeof(kbuf), "%d\n", val);
-    bytes_to_copy = strlen(kbuf);
-
-    if (copy_to_user(buf, kbuf, bytes_to_copy))
+    if (copy_to_user(buf, kbuf, bytes))
         return -EFAULT;
 
-    *offset = bytes_to_copy;
-    return bytes_to_copy;
+    *offset = bytes;
+    return bytes;
 }
 
 static ssize_t counter_write(struct file *file, const char __user *buf, size_t len, loff_t *offset) {
     char kbuf[32];
-    int val, ret;
+    int val;
 
     if (len >= sizeof(kbuf))
         return -EINVAL;
@@ -50,9 +47,8 @@ static ssize_t counter_write(struct file *file, const char __user *buf, size_t l
 
     kbuf[len] = '\0';
 
-    ret = kstrtoint(strim(kbuf), 10, &val);
-    if (ret < 0 || val < 0)
-        return -EINVAL; /* Tra ve loi neu nhap chuoi khong phai so hoac la so am */
+    if (kstrtoint(strim(kbuf), 10, &val) < 0 || val < 0)
+        return -EINVAL; /* Loi neu khong phai so hoac la so am */
 
     atomic_set(&counter, val);
     atomic_inc(&total_writes);
@@ -91,25 +87,16 @@ static const struct proc_ops counter_proc_ops = {
 };
 
 static int __init counter_init(void) {
-    int ret;
-    ret = misc_register(&counter_miscdev);
-    if (ret) {
-        pr_err("counter_driver: Could not register misc device\n");
-        return ret;
-    }
-
-    if (!proc_create("counter_info", 0444, NULL, &counter_proc_ops)) {
-        pr_warn("counter_driver: Could not create /proc/counter_info\n");
-    }
-
-    pr_info("counter_driver: Loaded successfully /dev/counter\n");
+    misc_register(&counter_miscdev);
+    proc_create("counter_info", 0444, NULL, &counter_proc_ops);
+    pr_info("counter_driver: Loaded /dev/counter\n");
     return 0;
 }
 
 static void __exit counter_exit(void) {
     remove_proc_entry("counter_info", NULL);
     misc_deregister(&counter_miscdev);
-    pr_info("counter_driver: Unloaded successfully\n");
+    pr_info("counter_driver: Unloaded\n");
 }
 
 module_init(counter_init);
