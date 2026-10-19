@@ -156,18 +156,33 @@ LABS
 │   └── output/
 │       └── initramfs_lab3.cpio.gz         # RootFS tích hợp các công cụ debug
 │
-Labs_Assignments_Group3_IC2009/
-├── LAB-01/               # Lab 1: Cấu hình Kernel, U-Boot Bootloader & BusyBox RootFS
-├── LAB-02/               # Lab 2: Character Device Driver, procfs/sysfs, MTD & JFFS2
-├── LAB-03/               # Lab 3: Remote Debugging (GDB), Valgrind, perf, strace & cyclictest
-├── Assignment1/          # Assignment 1: How to Write a Device Driver
-│   ├── task1_ioctl/      #   Task 1: Character Driver hỗ trợ IOCTL Interface & Mutex
-│   ├── task2_misc/       #   Task 2: Misc Device Counter Driver dùng Atomic Operations
-│   ├── logs/             #   Nhật ký kiểm thử (dmesg, test outputs)
-│   └── bao_cao/          #   Báo cáo kỹ thuật PDF & Câu hỏi lý thuyết
-└── Assignment2/          # Assignment 2: Capstone Project - Sensor Monitoring System (SMS)
-    ├── driver/           #   Kernel Driver cảm biến (/dev/sms_sensor, /proc/sms_stats)
-    ├── app/              #   Ứng dụng đa luồng POSIX (Sensor, Processor, Alert, Logger)
-    ├── logs/             #   Kết quả phân tích Valgrind, strace, perf & Jitter report
-    ├── demo/             #   Video Demo hoạt động hệ thống
-    └── bao_cao/          #   Báo cáo thiết kế kiến trúc PDF
+ASSIGNMENTS
+├── Assignment1/                           # ASSIGNMENT 01: How to Write a Device Driver
+│   ├── task1_ioctl/                       # Task 1: Character Driver hỗ trợ IOCTL Interface & Mutex
+│   │   ├── asgn1_driver.c                 # Driver hỗ trợ 4 lệnh ioctl và bộ đệm an toàn
+│   │   ├── asgn1_ioctl.h                  # Header định nghĩa magic number, struct stats & macro _IO/_IOR/_IOW
+│   │   ├── Makefile                       # KBuild Makefile biên dịch chéo cho ARMv7
+│   │   └── test_asgn1.sh                  # Shell script kiểm thử tự động 4 lệnh ioctl trong QEMU
+│   ├── task2_misc/                        # Task 2: Misc Device Driver - Counter Device
+│   │   ├── counter_driver.c               # Driver đăng ký misc device (/dev/counter) sử dụng atomic_t
+│   │   ├── Makefile                       # KBuild Makefile biên dịch counter_driver.ko
+│   │   └── test_counter.sh                # Shell script kiểm thử auto-increment, write reset & /proc/counter_info
+│   ├── logs/                              # Nhật ký kiểm thử: test_asgn1_output.txt, test_counter_output.txt, dmesg_full.txt
+│   └── bao_cao/                           # Báo cáo kỹ thuật PDF (sơ đồ kiến trúc, so sánh 3 loại driver, lý thuyết)
+│
+└── Assignment2/                           # ASSIGNMENT 02: Capstone Project - Sensor Monitoring System (SMS)
+    ├── driver/                            # Kernel Driver cảm biến (sms_sensor_driver.c, sms_sensor.h)
+    │   ├── sms_sensor_driver.c            # Driver mô phỏng cảm biến nhiệt độ/độ ẩm CSV, /proc/sms_stats, ioctl
+    │   └── Makefile                       # Makefile cross-compile sms_sensor.ko
+    ├── app/                               # Ứng dụng nhúng đa luồng POSIX (sms_app)
+    │   ├── sms_app.c                      # Main process & argument parsing (-i, -t, -h, -d, -v)
+    │   ├── sensor_thread.c/.h             # Luồng đọc cảm biến chu kỳ (SCHED_FIFO RT priority, mlockall)
+    │   ├── processor_thread.c/.h          # Luồng tính trung bình trượt (10 mẫu) & phát hiện vượt ngưỡng
+    │   ├── alert_thread.c/.h              # Luồng xử lý cảnh báo qua POSIX Message Queue (alarm_queue)
+    │   ├── logger_thread.c/.h             # Luồng ghi file log (/tmp/sms.log) với log rotation (>1MB)
+    │   ├── circular_buffer.c/.h           # Thread-safe Circular Buffer (pthread_mutex_t & pthread_cond_t)
+    │   └── Makefile                       # Build targets song song cho ARMv7 (make arm) và x86_64 (make host)
+    ├── output/                            # Package initramfs_asgn2.cpio.gz boot thành công trên QEMU
+    ├── logs/                              # Nhật ký phân tích: valgrind_sms.txt, strace_sms.txt, perf_sms.txt, jitter_report.txt
+    ├── demo/                              # Video demo hoạt động hệ thống (MSSV_demo.mp4, 3-5 phút)
+    └── bao_cao/                           # Báo cáo thiết kế hệ thống, Resource Allocation Graph & Reflection PDF
