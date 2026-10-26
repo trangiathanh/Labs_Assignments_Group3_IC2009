@@ -1,0 +1,77 @@
+The target architecture is set to "arm".
+Reading /lib/ld-linux-armhf.so.3 from remote target...
+warning: File transfers from remote targets can be slow. Use "set sysroot" to access files locally instead.
+Reading /lib/ld-linux-armhf.so.3 from remote target...
+warning: BFD: warning: system-supplied DSO at 0x40820000 has a corrupt string table index
+0x40810598 in _start () from target:/lib/ld-linux-armhf.so.3
+Breakpoint 1 at 0x400732: file buggy_app.c, line 26.
+Breakpoint 2 at 0x400682: file buggy_app.c, line 6.
+Breakpoint 3 at 0x4006cc: file buggy_app.c, line 14.
+Reading /lib/libc.so.6 from remote target...
+Reading /usr/lib/debug/.build-id/7b/44c2ff242615181dae8e67d325f1cfe0e458ba.debug from remote target...
+Reading /lib/44c2ff242615181dae8e67d325f1cfe0e458ba.debug from remote target...
+Reading /lib/.debug/44c2ff242615181dae8e67d325f1cfe0e458ba.debug from remote target...
+Reading /usr/lib/debug//lib/44c2ff242615181dae8e67d325f1cfe0e458ba.debug from remote target...
+Reading /usr/lib/debug/lib//44c2ff242615181dae8e67d325f1cfe0e458ba.debug from remote target...
+
+This GDB supports auto-downloading debuginfo from the following URLs:
+  <https://debuginfod.ubuntu.com>
+Enable debuginfod for this session? (y or [n]) [answered N; input not from terminal]
+Debuginfod has been disabled.
+To make this setting permanent, add 'set debuginfod enabled off' to .gdbinit.
+
+Breakpoint 1, main (argc=1, argv=0x40800064) at buggy_app.c:26
+26	int main(int argc, char *argv[]) {
+27	    printf("=== Buggy App v1.0 - LAB-03 Debug Target ===\n");
+gdb_script.txt:10: Error in sourced command file:
+No symbol "i" in current context.
+The target architecture is set to "arm".
+Reading /lib/ld-linux-armhf.so.3 from remote target...
+warning: File transfers from remote targets can be slow. Use "set sysroot" to access files locally instead.
+Reading /lib/ld-linux-armhf.so.3 from remote target...
+warning: BFD: warning: system-supplied DSO at 0x40820000 has a corrupt string table index
+0x40810598 in _start () from target:/lib/ld-linux-armhf.so.3
+Breakpoint 1 at 0x400732: file buggy_app.c, line 26.
+Breakpoint 2 at 0x400682: file buggy_app.c, line 6.
+Breakpoint 3 at 0x4006cc: file buggy_app.c, line 14.
+Reading /lib/libc.so.6 from remote target...
+Reading /usr/lib/debug/.build-id/7b/44c2ff242615181dae8e67d325f1cfe0e458ba.debug from remote target...
+Reading /lib/44c2ff242615181dae8e67d325f1cfe0e458ba.debug from remote target...
+Reading /lib/.debug/44c2ff242615181dae8e67d325f1cfe0e458ba.debug from remote target...
+Reading /usr/lib/debug//lib/44c2ff242615181dae8e67d325f1cfe0e458ba.debug from remote target...
+Reading /usr/lib/debug/lib//44c2ff242615181dae8e67d325f1cfe0e458ba.debug from remote target...
+
+This GDB supports auto-downloading debuginfo from the following URLs:
+  <https://debuginfod.ubuntu.com>
+Enable debuginfod for this session? (y or [n]) [answered N; input not from terminal]
+Debuginfod has been disabled.
+To make this setting permanent, add 'set debuginfod enabled off' to .gdbinit.
+
+Breakpoint 1, main (argc=1, argv=0x40800064) at buggy_app.c:26
+26	int main(int argc, char *argv[]) {
+27	    printf("=== Buggy App v1.0 - LAB-03 Debug Target ===\n");
+gdb_script.txt:10: Error in sourced command file:
+No symbol "i" in current context.
+Function "process_data
+break create_message
+continue" not defined.
+Note: breakpoint 2 also set at pc 0x400682.
+Breakpoint 4 at 0x400682: file buggy_app.c, line 6.
+Note: breakpoint 3 also set at pc 0x4006cc.
+Breakpoint 5 at 0x4006cc: file buggy_app.c, line 14.
+Continuing.
+
+Breakpoint 2, process_data (data=0x407ffec8, len=5) at buggy_app.c:6
+6	    int sum = 0;
+7	    for (int i = 0; i <= len; i++) {
+8	        sum += data[i];
+$1 = 0
+$2 = (int *) 0x407ffedc
+Continuing.
+
+Breakpoint 3, create_message (text=0x400940 "Hello Embedded Linux") at buggy_app.c:14
+14	    char *buf = malloc(strlen(text) + 1);
+15	    strcpy(buf, text);
+16	    free(buf);
+17	    return buf;
+$3 = 0x403598 "\003\004"
