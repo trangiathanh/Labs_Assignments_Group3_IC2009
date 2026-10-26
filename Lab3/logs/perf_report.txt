@@ -1,0 +1,23 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 107  of event 'task-clock:ppp'
+# Event count (approx.): 26750000
+#
+# Overhead  Command        Shared Object         Symbol                            
+# ........  .............  ....................  ..................................
+#
+    74.77%  profiling_app  profiling_app         [.] heavy_task_A
+    19.63%  profiling_app  profiling_app         [.] heavy_task_B
+     1.87%  profiling_app  ld-linux-x86-64.so.2  [.] init_cpu_features.constprop.0
+     0.93%  profiling_app  [kernel.kallsyms]     [k] _raw_spin_unlock_irqrestore
+     0.93%  profiling_app  [kernel.kallsyms]     [k] rcu_core
+     0.93%  profiling_app  ld-linux-x86-64.so.2  [.] get_common_indices.constprop.0
+     0.93%  profiling_app  ld-linux-x86-64.so.2  [.] handle_amd
+
+
+#
+# (Cannot load tips.txt file, please install perf!)
+#
