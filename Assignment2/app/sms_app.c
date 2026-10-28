@@ -1,43 +1,61 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <signal.h>
 #include <pthread.h>
 #include "circular_buffer.h"
 #include "sensor_thread.h"
+#include "processor_thread.h"
 #include "logger_thread.h"
 
-static int running = 1;
+static CircularBuffer g_cb;
+static volatile int g_running = 1;
 
 void handle_sigint(int sig) {
     (void)sig;
-    running = 0;
+    g_running = 0;
+    pthread_cond_broadcast(&g_cb.not_empty);
 }
 
-int main(void) {
-    signal(SIGINT, handle_sigint);
-
-    CircularBuffer cb;
-    cb_init(&cb);
-
-    typedef struct { const char *path; int interval; int *run; CircularBuffer *buf; } SArgs;
-    SArgs s_args = { "/dev/sms_sensor", 100, &running, &cb };
-
-    typedef struct { CircularBuffer *buf; const char *file; int *run; } LArgs;
-    LArgs l_args = { &cb, "sensor_output.log", &running };
-
-    pthread_t t_sensor, t_logger;
-    pthread_create(&t_sensor, NULL, sensor_thread_func, &s_args);
-    pthread_create(&t_logger, NULL, logger_thread_func, &l_args);
-
-    while (running) {
-        usleep(100000);
+int main(int argc, char *argv[]) {
+    int duration = 0;
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-d") == 0 && i + 1 < argc) {
+            duration = atoi(argv[i + 1]);
+        }
     }
 
-    pthread_join(t_sensor, NULL);
-    pthread_join(t_logger, NULL);
+    signal(SIGINT, handle_sigint);
+    cb_init(&g_cb);
+    log_system_event("SMS Sensor Application Started.");
 
-    cb_destroy(&cb);
-    printf("App exited cleanly.\n");
+    SensorArgs sargs = { .cb = &g_cb, .running = &g_running };
+    ProcessorArgs pargs = { .cb = &g_cb, .running = &g_running };
+
+    pthread_t sensor_th, proc_th;
+    pthread_create(&sensor_th, NULL, sensor_thread_func, &sargs);
+    pthread_create(&proc_th, NULL, processor_thread_func, &pargs);
+
+    if (duration > 0) {
+        sleep(duration);
+        g_running = 0;
+        pthread_cond_broadcast(&g_cb.not_empty);
+    } else {
+        while (g_running) {
+            sleep(1);
+        }
+    }
+
+    pthread_join(sensor_th, NULL);
+    pthread_join(proc_th, NULL);
+
+    printf("[SUMMARY] produced=%zu consumed=%zu size=%zu overflow=%zu\n",
+           cb_get_produced(&g_cb),
+           cb_get_consumed(&g_cb),
+           cb_get_size(&g_cb),
+           cb_get_overflow(&g_cb));
+
+    cb_destroy(&g_cb);
     return 0;
 }

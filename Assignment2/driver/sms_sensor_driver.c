@@ -1,151 +1,92 @@
 #include <linux/module.h>
-#include <linux/kernel.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/random.h>
-#include <linux/ktime.h>
-#include <linux/delay.h>
-#include "sms_sensor.h"
+#include <linux/jiffies.h>
 
-#define DRIVER_NAME "sms_sensor_driver"
 #define DEVICE_NAME "sms_sensor"
-#define PROC_NAME   "sms_stats"
+#define PROC_NAME "sms_stats"
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Group3_IC2009");
-MODULE_DESCRIPTION("Assignment 2 - SMS Sensor Kernel Driver");
+MODULE_AUTHOR("Group 3");
+MODULE_DESCRIPTION("SMS Sensor Kernel Driver");
 
-static int major_num;
-static unsigned long read_count = 0;
-static int last_temp_scaled = 2500; // 25.00 * 100
-static int last_humi_scaled = 5000; // 50.00 * 100
-static int sampling_interval_ms = 100;
-static ktime_t start_time;
-static DEFINE_MUTEX(sensor_mutex);
+static int major_number;
+static u64 total_bytes_read = 0;
+static int min_temp = 99999;
+static int max_temp = -99999;
+static int has_sample = 0;
 
-static ssize_t sms_read(struct file *file, char __user *buf, size_t len, loff_t *offset) {
-    char kbuf[128];
-    int datalen;
-    u32 rand_val;
-    long long timestamp_ms;
-    int temp_int, temp_dec;
-    int humi_int, humi_dec;
-
-    if (*offset > 0)
-        return 0;
-
-    mutex_lock(&sensor_mutex);
-    
-    rand_val = get_random_u32();
-    last_temp_scaled = 1500 + (rand_val % 3000); 
-    rand_val = get_random_u32();
-    last_humi_scaled = 3000 + (rand_val % 6000); 
-    
-    read_count++;
-    timestamp_ms = ktime_to_ms(ktime_get());
-
-    temp_int = last_temp_scaled / 100;
-    temp_dec = last_temp_scaled % 100;
-
-    humi_int = last_humi_scaled / 100;
-    humi_dec = last_humi_scaled % 100;
-
-    datalen = snprintf(kbuf, sizeof(kbuf), "%lld,%d.%02d,%d.%02d\n", 
-                       timestamp_ms, temp_int, temp_dec, humi_int, humi_dec);
-    
-    mutex_unlock(&sensor_mutex);
-
-    if (len < (size_t)datalen)
-        return -EINVAL;
-
-    if (copy_to_user(buf, kbuf, datalen))
-        return -EFAULT;
-
-    *offset += datalen;
-    
-    if (sampling_interval_ms > 0)
-        msleep(sampling_interval_ms);
-
-    return datalen;
-}
-
-static long sms_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {
-    int interval;
-    switch (cmd) {
-        case SMS_SET_INTERVAL:
-            if (copy_from_user(&interval, (int __user *)arg, sizeof(int)))
-                return -EFAULT;
-            if (interval < 10)
-                return -EINVAL;
-            mutex_lock(&sensor_mutex);
-            sampling_interval_ms = interval;
-            mutex_unlock(&sensor_mutex);
-            pr_info("%s: Interval set to %d ms\n", DRIVER_NAME, interval);
-            break;
-        default:
-            return -ENOTTY;
+static int proc_show(struct seq_file *m, void *v) {
+    seq_printf(m, "total_bytes_read: %llu\n", total_bytes_read);
+    if (!has_sample) {
+        seq_printf(m, "min_temperature: N/A\n");
+        seq_printf(m, "max_temperature: N/A\n");
+    } else {
+        seq_printf(m, "min_temperature: %d.%02d\n", min_temp / 100, min_temp % 100);
+        seq_printf(m, "max_temperature: %d.%02d\n", max_temp / 100, max_temp % 100);
     }
     return 0;
 }
 
-static int sms_proc_show(struct seq_file *m, void *v) {
-    long long uptime_sec = ktime_divns(ktime_sub(ktime_get(), start_time), NSEC_PER_SEC);
-    int temp_int, temp_dec, humi_int, humi_dec;
-    char line_buf[256];
-    
-    mutex_lock(&sensor_mutex);
-    
-    temp_int = last_temp_scaled / 100;
-    temp_dec = last_temp_scaled % 100;
-
-    humi_int = last_humi_scaled / 100;
-    humi_dec = last_humi_scaled % 100;
-
-    snprintf(line_buf, sizeof(line_buf), 
-             "read_count: %lu\nlast_temperature: %d.%02d\nlast_humidity: %d.%02d\ndriver_uptime_seconds: %lld\n",
-             read_count, temp_int, temp_dec, humi_int, humi_dec, uptime_sec);
-    
-    mutex_unlock(&sensor_mutex);
-    
-    seq_puts(m, line_buf);
-    return 0;
+static int proc_open(struct inode *inode, struct file *file) {
+    return single_open(file, proc_show, NULL);
 }
 
-static int sms_proc_open(struct inode *inode, struct file *file) {
-    return single_open(file, sms_proc_show, NULL);
-}
-
-static const struct proc_ops sms_proc_ops = {
-    .proc_open    = sms_proc_open,
-    .proc_read    = seq_read,
-    .proc_lseek   = seq_lseek,
+static const struct proc_ops proc_fops = {
+    .proc_open = proc_open,
+    .proc_read = seq_read,
+    .proc_lseek = seq_lseek,
     .proc_release = single_release,
 };
 
-static const struct file_operations sms_fops = {
-    .owner          = THIS_MODULE,
-    .read           = sms_read,
-    .unlocked_ioctl = sms_ioctl,
+static ssize_t dev_read(struct file *file, char __user *buf, size_t count, loff_t *ppos) {
+    char kbuf[64];
+    int len;
+    u32 rand_val;
+    int temp_val, hum_val;
+    unsigned long ms = jiffies_to_msecs(jiffies);
+
+    get_random_bytes(&rand_val, sizeof(rand_val));
+    temp_val = 1500 + (rand_val % 3001); // 15.00C -> 45.00C
+    get_random_bytes(&rand_val, sizeof(rand_val));
+    hum_val = 3000 + (rand_val % 5001);  // 30.00% -> 80.00%
+
+    if (temp_val < min_temp) min_temp = temp_val;
+    if (temp_val > max_temp) max_temp = temp_val;
+    has_sample = 1;
+
+    len = snprintf(kbuf, sizeof(kbuf), "%lu,%d.%02d,%d.%02d\n",
+                   ms, temp_val / 100, temp_val % 100, hum_val / 100, hum_val % 100);
+
+    if (count < len) return -EINVAL;
+
+    if (copy_to_user(buf, kbuf, len)) {
+        return -EFAULT;
+    }
+
+    total_bytes_read += len;
+    return len;
+}
+
+static struct file_operations fops = {
+    .owner = THIS_MODULE,
+    .read = dev_read,
 };
 
-static int __init sms_init(void) {
-    start_time = ktime_get();
-    major_num = register_chrdev(0, DEVICE_NAME, &sms_fops);
-    if (major_num < 0)
-        return major_num;
-
-    proc_create(PROC_NAME, 0, NULL, &sms_proc_ops);
-    pr_info("%s loaded with major %d\n", DRIVER_NAME, major_num);
+static int __init sms_driver_init(void) {
+    major_number = register_chrdev(0, DEVICE_NAME, &fops);
+    if (major_number < 0) return major_number;
+    proc_create(PROC_NAME, 0444, NULL, &proc_fops);
     return 0;
 }
 
-static void __exit sms_exit(void) {
+static void __exit sms_driver_exit(void) {
     remove_proc_entry(PROC_NAME, NULL);
-    unregister_chrdev(major_num, DEVICE_NAME);
-    pr_info("%s unloaded\n", DRIVER_NAME);
+    unregister_chrdev(major_number, DEVICE_NAME);
 }
 
-module_init(sms_init);
-module_exit(sms_exit);
+module_init(sms_driver_init);
+module_exit(sms_driver_exit);

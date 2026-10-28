@@ -1,8 +1,6 @@
 #ifndef LOGGER_THREAD_H
 #define LOGGER_THREAD_H
 
-#include "circular_buffer.h"
+void log_system_event(const char *msg);
 
-void* logger_thread_func(void *arg);
-
-#endif
+#endif /* LOGGER_THREAD_H */
